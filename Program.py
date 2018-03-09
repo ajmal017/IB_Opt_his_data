@@ -904,13 +904,13 @@ class TestApp(TestWrapper, TestClient):
         print("HeadTimestamp: ", reqId, " ", headTimestamp)
         stock_code = stock_code_map[reqId]
         # 检查是否存在些索引，如果不存在则创建，存在则返回None
-        my_db['HeadTimestamps'].ensure_index([('stock_code', ASCENDING)])
+        my_db['HeadTimestamps'].create_index([('stock_code', ASCENDING)])
         # 定义更新主键，若主键存在则更新，不存在则插入
         update_key = {'stock_code': stock_code}
         # 定义更新内容
         update_item = {'stock_code': stock_code, 'headTimestamp': headTimestamp, 'update_time': datetime.datetime.now()}
         # 执行更新操作
-        my_db['HeadTimestamps'].update(update_key, {'$set': update_item}, upsert=True)
+        my_db['HeadTimestamps'].update_one(update_key, {'$set': update_item}, upsert=True)
         
     # ! [headTimestamp]
 
@@ -1780,7 +1780,7 @@ def main():
     # cmdLineParser.add_option("-c", action="store_True", dest="use_cache", default = False, help = "use the cache")
     # cmdLineParser.add_option("-f", action="store", type="string", dest="file", default="", help="the input file")
     cmdLineParser.add_argument("-p", "--port", action="store", type=int,
-                               dest="port", default=4001, help="The TCP port to use")
+                               dest="port", default=7496, help="The TCP port to use")
     cmdLineParser.add_argument("-C", "--global-cancel", action="store_true",
                                dest="global_cancel", default=False,
                                help="whether to trigger a globalCancel req")
