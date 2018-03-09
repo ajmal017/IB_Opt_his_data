@@ -34,8 +34,8 @@ class Processer(Thread):
             # self.historicalDataRequests_req_HeadTimestamp()
             # self.historicalDataRequests_req_Seconds()
             # self.historicalDataRequests_req_Days()
-            self.optionsOperations_req()
-            # self.option_tikc_req()
+            # self.optionsOperations_req()
+            self.option_tikc_req()
             # self.mktData_req_opt()
             # self.historicalDataRequests_req_opt_Seconds()
 
@@ -45,13 +45,12 @@ class Processer(Thread):
         # Requesting historical data
         # ! [reqHeadTimeStamp]
         for index in self.stock_code_map.keys():
-            print(self.client.done)
-            if self.client.done:
+            if self.client.process_done:
                 break
             else:
                 stock_code = self.stock_code_map[index]
                 print('Start to get', stock_code, str(index))
-                self.client.reqHeadTimeStamp(index, ContractSamples.USStockAtSmart(stock_code), "TRADES", 0, 1)
+                self.client.reqHeadTimeStamp(index, ContractSamples.OptionWithLocalSymbol(stock_code), "TRADES", 0, 1)
                 time.sleep(10)
                 print('Finish query', stock_code)
 
@@ -64,13 +63,12 @@ class Processer(Thread):
                 queryTime = datetime.datetime(2017,12,8,10,30)
                 flag = 1
 
-            if self.client.done:
+            if self.client.process_done:
                 break
 
             while queryTime.hour > 9:
                 for index in self.stock_code_map.keys():
-                    print(self.client.done)
-                    if self.client.done:
+                    if self.client.process_done:
                         break
                     else:
                         stock_code = self.stock_code_map[index]
@@ -89,12 +87,11 @@ class Processer(Thread):
         queryTime = datetime.datetime(2016, 12, 25)
         while queryTime > datetime.datetime(1980, 1, 1):
             for index in self.stock_code_map.keys():
-                if self.client.done:
+                if self.client.process_done:
                     break
                 stock_code = self.stock_code_map[index]
                 headTimestamp = datetime.datetime.strptime(stock_HeadTimestamp[stock_code], '%Y/%m/%d')
                 if queryTime > headTimestamp:
-                    print(self.client.done)
                     print('Start to get', stock_code, str(index), str(queryTime))
                     self.client.reqHistoricalData(index, ContractSamples.USStockAtSmart(stock_code),
                                                   queryTime.strftime("%Y%m%d %H:%M:%S"),
@@ -129,8 +126,7 @@ class Processer(Thread):
             endday = queryTime - timedelta(days=180)
 
             while queryTime > endday:
-                print(self.client.done)
-                if self.client.done:
+                if self.client.process_done:
                     break
                 else:
                     stock_code = self.stock_code_map[index]
