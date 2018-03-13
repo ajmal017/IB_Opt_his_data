@@ -229,6 +229,12 @@ class TestApp(TestWrapper, TestClient):
         self.tick_reqId = None
         self.tick_num = 1
         self.process_done = False
+        self.option_code_map = []
+        self.req_opt_contract_end = False
+        self.opt_req_next_code = False
+        self.opt_req_next_time = False
+        self.opt_req_continue = False
+        self.lasttime = None
 
 
     def dumpTestCoverageSituation(self):
@@ -979,36 +985,50 @@ class TestApp(TestWrapper, TestClient):
     # ! [historicaltickslast]
     def historicalTicksLast(self, reqId: int, ticks: ListOfHistoricalTickLast,
                             done: bool):
-        print('start option tick..........................')
-        time = datetime.datetime.fromtimestamp(float(ticks[0].time), pytz.timezone('US/Eastern'))
-        tick_date_now = time.year * 10000 + time.month * 100 + time.day
-        if not self.tick_date:
-            self.tick_date = tick_date_now
-            self.tick_reqId = reqId
-        if self.tick_date != tick_date_now or self.tick_reqId != reqId:
-            self.tick_num = 1
-            self.tick_date = tick_date_now
-            self.tick_reqId = reqId
-        stock_code = stock_code_map[reqId]
-        my_db[stock_code].create_index([('time', ASCENDING)])
-        for tick in ticks:
-            time = datetime.datetime.fromtimestamp(float(tick.time),pytz.timezone('US/Eastern'))
-            tick_ID = tick_date_now*100000 + self.tick_num
-            time = time.strftime("%Y-%m-%d %H:%M:%S")
-            print("Historical Tick Last. Req Id: ", reqId, "tick_ID: ", tick_ID, "time: ", time,
-                  ", price: ", tick.price, ", size: ", tick.size, ", exchange: ", tick.exchange,
-                  ", special conditions:", tick.specialConditions)
+        print('start option tick test..........................')
+        if ticks:
+            time = datetime.datetime.fromtimestamp(float(ticks[0].time), pytz.timezone('US/Eastern'))
+            tick_date_now = time.year * 10000 + time.month * 100 + time.day
+            if not self.tick_date:
+                self.tick_date = tick_date_now
+                self.tick_reqId = reqId
+            if self.tick_date != tick_date_now or self.tick_reqId != reqId:
+                self.tick_num = 1
+                self.tick_date = tick_date_now
+                self.tick_reqId = reqId
+            stock_code = stock_code_map[reqId]
+            my_db[stock_code].create_index([('time', ASCENDING)])
+            for tick in ticks:
+                timestamp = tick.time
+                time = datetime.datetime.fromtimestamp(float(tick.time),pytz.timezone('US/Eastern'))
+                tick_ID = tick_date_now*100000 + self.tick_num
+                time = time.strftime("%Y-%m-%d %H:%M:%S")
+                print("Historical Tick Last. Req Id: ", reqId, ", tick_ID: ", tick_ID, ", time: ", time,
+                      ", timestamp: ", timestamp, ", price: ", tick.price, ", size: ", tick.size,
+                      ", exchange: ", tick.exchange, ", special conditions:", tick.specialConditions)
 
-            time = datetime.datetime.strptime(time, "%Y-%m-%d %H:%M:%S")
-            # 定义更新主键，若主键存在则更新，不存在则插入
-            update_key = {'tick_ID': tick_ID, 'time': time}
-            # 定义更新内容
-            update_item = {'stock_code': stock_code, 'tick_ID': tick_ID, 'time': time, 'price': tick.price, 'size': tick.size,
-                           'exchange': tick.exchange, 'special conditions': tick.specialConditions,
-                           'update_time': datetime.datetime.now()}
-            # 执行更新操作
-            my_db[stock_code].update_one(update_key, {'$set': update_item}, upsert=True)
-            self.tick_num += 1
+                time = datetime.datetime.strptime(time, "%Y-%m-%d %H:%M:%S")
+                # 定义更新主键，若主键存在则更新，不存在则插入
+                update_key = {'tick_ID': tick_ID, 'time': time}
+                # 定义更新内容
+                update_item = {'stock_code': stock_code, 'tick_ID': tick_ID, 'time': time, 'timestamp':timestamp,
+                               'price': tick.price, 'size': tick.size,
+                               'exchange': tick.exchange, 'special conditions': tick.specialConditions,
+                               'update_time': datetime.datetime.now()}
+                # 执行更新操作
+                my_db[stock_code].update_one(update_key, {'$set': update_item}, upsert=True)
+                self.tick_num += 1
+            if len(ticks) < 1000:
+                self.opt_req_next_time = True
+                self.tick_num = 1
+            else:
+                self.opt_req_continue = True
+                self.lasttime = datetime.datetime.fromtimestamp(float(ticks[-1].time), pytz.timezone('US/Eastern'))
+                
+
+        else:
+            self.opt_req_next_code = True
+            self.tick_num = 1
         print(len(ticks))
     # ! [historicaltickslast]
 
@@ -1158,6 +1178,7 @@ class TestApp(TestWrapper, TestClient):
         #     self.columnsname = [key for key in attrs.keys()]
         # temp = [value for value in attrs.values()]
         # self.contract_data.append(temp)
+        self.option_code_map.append(contractDetails.summary.localSymbol)
 
     # ! [contractdetails]
 
@@ -1174,7 +1195,8 @@ class TestApp(TestWrapper, TestClient):
     def contractDetailsEnd(self, reqId: int):
         super().contractDetailsEnd(reqId)
         print("ContractDetailsEnd. ", reqId, "\n")
-
+        if reqId == stock_code_max_index:
+            self.req_opt_contract_end = True
         # contract_pd = pd.DataFrame(self.contract_data, columns=self.columnsname)
         # contract_pd.to_csv('contract_details.csv')
         # print(self.contract_data)
@@ -1773,8 +1795,8 @@ def main():
 
     SetupLogger()
     logging.debug("now is %s", datetime.datetime.now())
-    logging.getLogger().setLevel(logging.ERROR)
-    # logging.getLogger().setLevel(logging.DEBUG)
+#    logging.getLogger().setLevel(logging.ERROR)
+    logging.getLogger().setLevel(logging.DEBUG)
 
     cmdLineParser = argparse.ArgumentParser("api tests")
     # cmdLineParser.add_option("-c", action="store_True", dest="use_cache", default = False, help = "use the cache")
@@ -1826,7 +1848,7 @@ def main():
         # ! [connect]
         # app.run()
         print('starting ....................................')
-        my_proc = processer.Processer(app, stock_code_map)
+        my_proc = processer.Processer(app)
         my_proc.start()
 #        while not app.done:
 #            print('Waiting to done .........................')
@@ -1841,14 +1863,5 @@ def main():
         app.dumpTestCoverageSituation()
         app.dumpReqAnsErrSituation()
 
-stock_code_map = {}
-def generate_stock_code_map():
-    index = 1
-    for item in stock_code_list:
-        stock_code_map[index] = item
-        index += 1
-
 if __name__ == "__main__":
-    generate_stock_code_map()
-    print(stock_code_map)
     main()
