@@ -361,11 +361,11 @@ class ContractSamples:
     from the TWS to prevent abuse. """
 
     @staticmethod
-    def OptionForQuery():
+    def OptionForQuery(symbol:str):
         #! [optionforquery]
         contract = Contract()
         # contract.symbol = "FISV"
-        contract.symbol = "AAPL"
+        contract.symbol = symbol
         contract.secType = "OPT"
         contract.exchange = "SMART"
         contract.currency = "USD"

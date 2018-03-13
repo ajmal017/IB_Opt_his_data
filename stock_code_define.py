@@ -12,6 +12,13 @@
 #                    'BABA  180420C00185000', 'BABA  180420C00190000', 'BABA  180420C00195000'
 #                    ]
 stock_code_list = ['AAPL  180420C00180000']
+
+stock_code_map = {}
+index = 10000001
+for item in stock_code_list:
+    stock_code_map[index] = item
+    index += 1
+stock_code_max_index = index - 1
 #
 # stock_code_list = ['AAPL', 'MSFT', 'XNET', 'TSLA', 'GE', 'GOOG', 'FB', 'COE', 'JNJ', 'FOX', 'IBM', 'WDC', 'TOT', 'DIS',
 #                    'CTRP', 'JD', 'NTES', 'MOMO', 'CSCO', 'TSM', 'EBAY', 'AMZN', 'JOBS', 'BIDU', 'PG', 'QCOM', 'INTC',
