@@ -989,19 +989,12 @@ class TestApp(TestWrapper, TestClient):
         if ticks:
             time = datetime.datetime.fromtimestamp(float(ticks[0].time), pytz.timezone('US/Eastern'))
             tick_date_now = time.year * 10000 + time.month * 100 + time.day
-            if not self.tick_date:
-                self.tick_date = tick_date_now
-                self.tick_reqId = reqId
-            if self.tick_date != tick_date_now or self.tick_reqId != reqId:
-                self.tick_num = 1
-                self.tick_date = tick_date_now
-                self.tick_reqId = reqId
             stock_code = stock_code_map[reqId]
             my_db[stock_code].create_index([('time', ASCENDING)])
             for tick in ticks:
                 timestamp = tick.time
                 time = datetime.datetime.fromtimestamp(float(tick.time),pytz.timezone('US/Eastern'))
-                tick_ID = tick_date_now*100000 + self.tick_num
+                tick_ID = tick_date_now*1000000 + self.tick_num
                 time = time.strftime("%Y-%m-%d %H:%M:%S")
                 print("Historical Tick Last. Req Id: ", reqId, ", tick_ID: ", tick_ID, ", time: ", time,
                       ", timestamp: ", timestamp, ", price: ", tick.price, ", size: ", tick.size,
@@ -1018,18 +1011,21 @@ class TestApp(TestWrapper, TestClient):
                 # 执行更新操作
                 my_db[stock_code].update_one(update_key, {'$set': update_item}, upsert=True)
                 self.tick_num += 1
+            print(len(ticks))
             if len(ticks) < 1000:
                 self.opt_req_next_time = True
+                print(self.tick_num - 1)
                 self.tick_num = 1
             else:
                 self.opt_req_continue = True
                 self.lasttime = datetime.datetime.fromtimestamp(float(ticks[-1].time), pytz.timezone('US/Eastern'))
-                
-
+                n=-2
+                while ticks[-1].time == ticks[n].time:
+                    n -= 1
+                self.tick_num += (n + 1)
         else:
             self.opt_req_next_code = True
             self.tick_num = 1
-        print(len(ticks))
     # ! [historicaltickslast]
 
     @printWhenExecuting
@@ -1795,8 +1791,8 @@ def main():
 
     SetupLogger()
     logging.debug("now is %s", datetime.datetime.now())
-#    logging.getLogger().setLevel(logging.ERROR)
-    logging.getLogger().setLevel(logging.DEBUG)
+    logging.getLogger().setLevel(logging.ERROR)
+    #logging.getLogger().setLevel(logging.DEBUG)
 
     cmdLineParser = argparse.ArgumentParser("api tests")
     # cmdLineParser.add_option("-c", action="store_True", dest="use_cache", default = False, help = "use the cache")
