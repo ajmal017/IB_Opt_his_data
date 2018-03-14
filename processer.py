@@ -33,10 +33,10 @@ class Processer(Thread):
             self.client.reqGlobalCancel()
         else:
             print("Executing requests")
-            # self.historicalDataRequests_req_HeadTimestamp()
+            self.historicalDataRequests_req_HeadTimestamp()
             # self.historicalDataRequests_req_Seconds()
             # self.historicalDataRequests_req_Days()
-            self.optionsOperations_req()
+            # self.optionsOperations_req()
             # self.option_tikc_req()
             # self.mktData_req_opt()
             # self.historicalDataRequests_req_opt_Seconds()
@@ -181,16 +181,18 @@ class Processer(Thread):
             else:
                 option_code = option_code_map[index]
                 if option_code not in option_code_ignore:
+                    option_code_headTime = option_code_headtime[option_code]
                     self.client.opt_req_next_code = False
                     queryTime = datetime.datetime(2018, 3, 12, 9, 30)
                     if option_code in option_code_jump.keys():
                         queryTime = datetime.datetime.strptime(option_code_jump[option_code],"%Y%m%d %H:%M:%S")
-                    self.opt_tick_req_single_code(index, option_code, queryTime)
+                    self.opt_tick_req_single_code(index, option_code, queryTime, option_code_headTime)
 
         print('request option tick data done!')
 
-    def opt_tick_req_single_code(self,index,option_code,query_Time):
+    def opt_tick_req_single_code(self,index,option_code,query_Time, option_code_headTime):
         queryTime = query_Time
+        headTime = option_code_headTime
         while not self.client.opt_req_next_code and not self.client.process_done:
             self.client.reqHistoricalTicks(index, ContractSamples.OptionWithLocalSymbol(option_code),
                                            queryTime.strftime("%Y%m%d %H:%M:%S"), "", 1000, "TRADES", 1, True, [])
@@ -214,7 +216,7 @@ class Processer(Thread):
                 else:
                     time.sleep(0.5)
                     print('sleeping.................')
-        if self.client.opt_req_next_code == True:
-            time.sleep(10)
-            self.client.opt_req_next_code = False
+            if self.client.opt_req_next_code == True:
+                time.sleep(10)
+                self.client.opt_req_next_code = False
         print(datetime.datetime.now())

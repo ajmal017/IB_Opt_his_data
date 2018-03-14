@@ -9,3 +9,5 @@
 option_code_ignore = ['AAPL  180420C00165000','AAPL  180420C00180000']
 
 option_code_jump = {"AAPL  190118C00140000":"20171229 09:30:00"}
+
+option_code_headtime = {}

@@ -908,15 +908,15 @@ class TestApp(TestWrapper, TestClient):
     # ! [headTimestamp]
     def headTimestamp(self, reqId:int, headTimestamp:str):
         print("HeadTimestamp: ", reqId, " ", headTimestamp)
-        # stock_code = stock_code_map[reqId]
-        # # 检查是否存在些索引，如果不存在则创建，存在则返回None
-        # my_db['HeadTimestamps'].create_index([('stock_code', ASCENDING)])
-        # # 定义更新主键，若主键存在则更新，不存在则插入
-        # update_key = {'stock_code': stock_code}
-        # # 定义更新内容
-        # update_item = {'stock_code': stock_code, 'headTimestamp': headTimestamp, 'update_time': datetime.datetime.now()}
-        # # 执行更新操作
-        # my_db['HeadTimestamps'].update_one(update_key, {'$set': update_item}, upsert=True)
+        stock_code = stock_code_map[reqId]
+        # 检查是否存在些索引，如果不存在则创建，存在则返回None
+        my_db['HeadTimestamps'].create_index([('stock_code', ASCENDING)])
+        # 定义更新主键，若主键存在则更新，不存在则插入
+        update_key = {'stock_code': stock_code}
+        # 定义更新内容
+        update_item = {'stock_code': stock_code, 'headTimestamp': headTimestamp, 'update_time': datetime.datetime.now()}
+        # 执行更新操作
+        my_db['HeadTimestamps'].update_one(update_key, {'$set': update_item}, upsert=True)
         
     # ! [headTimestamp]
 
@@ -1026,9 +1026,8 @@ class TestApp(TestWrapper, TestClient):
                     n -= 1
                 self.tick_num += (n + 1)
         else:
-            self.opt_req_next_code = True
+            self.opt_req_next_time = True
             self.tick_num = 1
-            print('next code..............')
             print(datetime.datetime.now())
     # ! [historicaltickslast]
 
