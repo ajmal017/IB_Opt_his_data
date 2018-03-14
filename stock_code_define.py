@@ -11,10 +11,10 @@
 #                    'BABA  180420C00170000', 'BABA  180420C00175000', 'BABA  180420C00180000',
 #                    'BABA  180420C00185000', 'BABA  180420C00190000', 'BABA  180420C00195000'
 #                    ]
-stock_code_list = ['AAPL  180420C00180000']
-
+# stock_code_list = ['AAPL  180420C00180000']
+stock_code_list = ['AAPL', 'BABA']
 stock_code_map = {}
-index = 10000001
+index = 1
 for item in stock_code_list:
     stock_code_map[index] = item
     index += 1

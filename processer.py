@@ -13,6 +13,7 @@ from date_list import *
 from datetime import timedelta
 from stock_HeadTimestamp import *
 from stock_code_define import *
+from option_code_ignore import *
 
 
 class Processer(Thread):
@@ -35,8 +36,8 @@ class Processer(Thread):
             # self.historicalDataRequests_req_HeadTimestamp()
             # self.historicalDataRequests_req_Seconds()
             # self.historicalDataRequests_req_Days()
-            # self.optionsOperations_req()
-            self.option_tikc_req()
+            self.optionsOperations_req()
+            # self.option_tikc_req()
             # self.mktData_req_opt()
             # self.historicalDataRequests_req_opt_Seconds()
 
@@ -112,10 +113,10 @@ class Processer(Thread):
         # self.client.reqHistoricalData(1, ContractSamples.OptionForQuery(),
         #                               "20180224 16:00:00", "900 S", "1 secs", "TRADES", 1, 1, False, [])
 
-        # self.client.reqHistoricalTicks(10000001, ContractSamples.OptionWithLocalSymbol("AAPL  180316C00180000"),
-        #                         "20180309 10:58:17", "", 1000, "TRADES", 1, True, [])
-        self.opt_tick_req_single_code(10000001, "AAPL  180316C00180000", datetime.datetime(2018,3,12,9,30))
-        # self.client.reqHeadTimeStamp(10000, ContractSamples.OptionWithLocalSymbol("AAPL  180420C00180000"), "TRADES", 0, 1)
+        # self.client.reqHistoricalTicks(0, ContractSamples.OptionWithLocalSymbol("AAPL  180420C00180000"),
+        #                         "20171124 09:30:00", "", 1000, "TRADES", 1, True, [])
+        # self.opt_tick_req_single_code(0, "AAPL  180420C00180000", datetime.datetime(2017,11,22,9,30))
+        self.client.reqHeadTimeStamp(1, ContractSamples.OptionWithLocalSymbol("AAPL  190118C00135000"), "TRADES", 0, 1)
 
         # self.client.reqMktData(1000, ContractSamples.OptionWithLocalSymbol("AAPL  180420C00180000"), "100,101,104,106,233,236,258", False, False, [])
         # ! [reqsecdefoptparams]
@@ -165,21 +166,26 @@ class Processer(Thread):
             else:
                 stock_code = self.stock_code_map[index]
                 self.client.reqContractDetails(index, ContractSamples.OptionForQuery(stock_code))
-                time.sleep(11)
+                time.sleep(30)
+                print('Asked for ', str(stock_code))
 
         while not self.client.req_opt_contract_end and not self.client.process_done:
             print('waiting for req_opt_contract_end Done')
             time.sleep(0.5)
+        print(self.client.option_code_map)
 
         option_code_map = self.client.option_code_map
-        for index in option_code_map:
+        for index in range(len(option_code_map)):
             if self.client.process_done:
                 break
             else:
                 option_code = option_code_map[index]
-                self.client.opt_req_next_code = False
-                queryTime = datetime.datetime(2018, 3, 9, 9, 30)
-                self.opt_tick_req_single_code(index, option_code, queryTime)
+                if option_code not in option_code_ignore:
+                    self.client.opt_req_next_code = False
+                    queryTime = datetime.datetime(2018, 3, 12, 9, 30)
+                    if option_code in option_code_jump.keys():
+                        queryTime = datetime.datetime.strptime(option_code_jump[option_code],"%Y%m%d %H:%M:%S")
+                    self.opt_tick_req_single_code(index, option_code, queryTime)
 
         print('request option tick data done!')
 
@@ -189,7 +195,7 @@ class Processer(Thread):
             self.client.reqHistoricalTicks(index, ContractSamples.OptionWithLocalSymbol(option_code),
                                            queryTime.strftime("%Y%m%d %H:%M:%S"), "", 1000, "TRADES", 1, True, [])
             time.sleep(15)
-            while not self.client.process_done:
+            while not self.client.process_done and not self.client.opt_req_next_code:
                 if self.client.opt_req_next_time:
                     if queryTime.isoweekday() == 1:
                         queryTime -= timedelta(days=3)
@@ -208,3 +214,7 @@ class Processer(Thread):
                 else:
                     time.sleep(0.5)
                     print('sleeping.................')
+        if self.client.opt_req_next_code == True:
+            time.sleep(10)
+            self.client.opt_req_next_code = False
+        print(datetime.datetime.now())

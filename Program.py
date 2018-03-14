@@ -229,7 +229,7 @@ class TestApp(TestWrapper, TestClient):
         self.tick_reqId = None
         self.tick_num = 1
         self.process_done = False
-        self.option_code_map = []
+        self.option_code_map = ["AAPL  180420C00180000"]
         self.req_opt_contract_end = False
         self.opt_req_next_code = False
         self.opt_req_next_time = False
@@ -908,15 +908,15 @@ class TestApp(TestWrapper, TestClient):
     # ! [headTimestamp]
     def headTimestamp(self, reqId:int, headTimestamp:str):
         print("HeadTimestamp: ", reqId, " ", headTimestamp)
-        stock_code = stock_code_map[reqId]
-        # 检查是否存在些索引，如果不存在则创建，存在则返回None
-        my_db['HeadTimestamps'].create_index([('stock_code', ASCENDING)])
-        # 定义更新主键，若主键存在则更新，不存在则插入
-        update_key = {'stock_code': stock_code}
-        # 定义更新内容
-        update_item = {'stock_code': stock_code, 'headTimestamp': headTimestamp, 'update_time': datetime.datetime.now()}
-        # 执行更新操作
-        my_db['HeadTimestamps'].update_one(update_key, {'$set': update_item}, upsert=True)
+        # stock_code = stock_code_map[reqId]
+        # # 检查是否存在些索引，如果不存在则创建，存在则返回None
+        # my_db['HeadTimestamps'].create_index([('stock_code', ASCENDING)])
+        # # 定义更新主键，若主键存在则更新，不存在则插入
+        # update_key = {'stock_code': stock_code}
+        # # 定义更新内容
+        # update_item = {'stock_code': stock_code, 'headTimestamp': headTimestamp, 'update_time': datetime.datetime.now()}
+        # # 执行更新操作
+        # my_db['HeadTimestamps'].update_one(update_key, {'$set': update_item}, upsert=True)
         
     # ! [headTimestamp]
 
@@ -989,22 +989,24 @@ class TestApp(TestWrapper, TestClient):
         if ticks:
             time = datetime.datetime.fromtimestamp(float(ticks[0].time), pytz.timezone('US/Eastern'))
             tick_date_now = time.year * 10000 + time.month * 100 + time.day
-            stock_code = stock_code_map[reqId]
-            my_db[stock_code].create_index([('time', ASCENDING)])
+            option_code = self.option_code_map[reqId]
+            stock_code = option_code.split()[0]
+            my_db[stock_code].create_index([('option_code', ASCENDING),('time', ASCENDING)])
             for tick in ticks:
                 timestamp = tick.time
                 time = datetime.datetime.fromtimestamp(float(tick.time),pytz.timezone('US/Eastern'))
                 tick_ID = tick_date_now*1000000 + self.tick_num
                 time = time.strftime("%Y-%m-%d %H:%M:%S")
-                print("Historical Tick Last. Req Id: ", reqId, ", tick_ID: ", tick_ID, ", time: ", time,
-                      ", timestamp: ", timestamp, ", price: ", tick.price, ", size: ", tick.size,
-                      ", exchange: ", tick.exchange, ", special conditions:", tick.specialConditions)
+                print("Historical Tick Last. Req Id: ", reqId, ", option_code: ", option_code,
+                      ", tick_ID: ", tick_ID, ", time: ", time, ", timestamp: ", timestamp,
+                      ", price: ", tick.price, ", size: ", tick.size, ", exchange: ", tick.exchange,
+                      ", special conditions:", tick.specialConditions)
 
                 time = datetime.datetime.strptime(time, "%Y-%m-%d %H:%M:%S")
                 # 定义更新主键，若主键存在则更新，不存在则插入
-                update_key = {'tick_ID': tick_ID, 'time': time}
+                update_key = {'tick_ID': tick_ID, 'time': time, 'option_code': option_code}
                 # 定义更新内容
-                update_item = {'stock_code': stock_code, 'tick_ID': tick_ID, 'time': time, 'timestamp':timestamp,
+                update_item = {'option_code': option_code, 'tick_ID': tick_ID, 'time': time, 'timestamp':timestamp,
                                'price': tick.price, 'size': tick.size,
                                'exchange': tick.exchange, 'special conditions': tick.specialConditions,
                                'update_time': datetime.datetime.now()}
@@ -1026,6 +1028,8 @@ class TestApp(TestWrapper, TestClient):
         else:
             self.opt_req_next_code = True
             self.tick_num = 1
+            print('next code..............')
+            print(datetime.datetime.now())
     # ! [historicaltickslast]
 
     @printWhenExecuting
@@ -1191,8 +1195,11 @@ class TestApp(TestWrapper, TestClient):
     def contractDetailsEnd(self, reqId: int):
         super().contractDetailsEnd(reqId)
         print("ContractDetailsEnd. ", reqId, "\n")
+        print(len(self.option_code_map))
         if reqId == stock_code_max_index:
             self.req_opt_contract_end = True
+            option_map = pd.DataFrame(self.option_code_map)
+            option_map.to_csv('option_code_map.csv')
         # contract_pd = pd.DataFrame(self.contract_data, columns=self.columnsname)
         # contract_pd.to_csv('contract_details.csv')
         # print(self.contract_data)
