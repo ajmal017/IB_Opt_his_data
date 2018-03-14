@@ -231,7 +231,6 @@ class TestApp(TestWrapper, TestClient):
         self.process_done = False
         self.option_code_map = ["AAPL  180420C00180000"]
         self.req_opt_contract_end = False
-        self.opt_req_next_code = False
         self.opt_req_next_time = False
         self.opt_req_continue = False
         self.lasttime = None

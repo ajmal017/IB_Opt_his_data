@@ -46,7 +46,8 @@ class Processer(Thread):
     def historicalDataRequests_req_HeadTimestamp(self):
         # Requesting historical data
         # ! [reqHeadTimeStamp]
-        for index in self.stock_code_map.keys():
+        # for index in self.stock_code_map.keys():
+        for index in range(1079,len(stock_code_list)+1):
             if self.client.process_done:
                 break
             else:
@@ -193,11 +194,13 @@ class Processer(Thread):
     def opt_tick_req_single_code(self,index,option_code,query_Time, option_code_headTime):
         queryTime = query_Time
         headTime = option_code_headTime
-        while not self.client.opt_req_next_code and not self.client.process_done:
+        opt_req_next_code = False
+        time_recorder = 0
+        while not opt_req_next_code and not self.client.process_done:
             self.client.reqHistoricalTicks(index, ContractSamples.OptionWithLocalSymbol(option_code),
                                            queryTime.strftime("%Y%m%d %H:%M:%S"), "", 1000, "TRADES", 1, True, [])
             time.sleep(15)
-            while not self.client.process_done and not self.client.opt_req_next_code:
+            while not self.client.process_done:
                 if self.client.opt_req_next_time:
                     if queryTime.isoweekday() == 1:
                         queryTime -= timedelta(days=3)
@@ -215,8 +218,11 @@ class Processer(Thread):
                     break
                 else:
                     time.sleep(0.5)
+                    time_recorder += 1
+                    if time_recorder > 600:  #5分钟内没有返回内容，则重新提交请求
+                        break
                     print('sleeping.................')
-            if self.client.opt_req_next_code == True:
-                time.sleep(10)
-                self.client.opt_req_next_code = False
+            if headTime > queryTime.year*10000+queryTime.month*100+queryTime.day :
+                opt_req_next_code = True
+
         print(datetime.datetime.now())
