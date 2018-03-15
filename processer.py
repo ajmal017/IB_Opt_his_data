@@ -198,8 +198,8 @@ class Processer(Thread):
         queryTime = query_Time
         headTime = option_code_headTime
         opt_req_next_code = False
-        time_recorder = 0
         while not opt_req_next_code and not self.client.process_done:
+            time_recorder = 0
             self.client.reqHistoricalTicks(index, ContractSamples.OptionWithLocalSymbol(option_code),
                                            queryTime.strftime("%Y%m%d %H:%M:%S"), "", 1000, "TRADES", 1, True, [])
             time.sleep(15)
@@ -220,9 +220,9 @@ class Processer(Thread):
                     print('continue...............')
                     break
                 else:
-                    time.sleep(0.5)
+                    time.sleep(5)
                     time_recorder += 1
-                    if time_recorder > 1200:  #10分钟内没有返回内容，则重新提交请求
+                    if time_recorder > 60:  #5分钟内没有返回内容，则重新提交请求
                         break
                     print('sleeping.................')
             if headTime > queryTime.year*10000+queryTime.month*100+queryTime.day :
