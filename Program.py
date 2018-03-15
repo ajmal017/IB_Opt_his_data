@@ -234,6 +234,7 @@ class TestApp(TestWrapper, TestClient):
         self.opt_req_next_time = False
         self.opt_req_continue = False
         self.lasttime = None
+        self.tick_head = [0,0]
 
 
     def dumpTestCoverageSituation(self):
@@ -986,48 +987,54 @@ class TestApp(TestWrapper, TestClient):
                             done: bool):
         print('start option tick test..........................')
         if ticks:
-            time = datetime.datetime.fromtimestamp(float(ticks[0].time), pytz.timezone('US/Eastern'))
-            tick_date_now = time.year * 10000 + time.month * 100 + time.day
-            option_code = self.option_code_map[reqId]
-            stock_code = option_code.split()[0]
-            my_db[stock_code].create_index([('option_code', ASCENDING),('time', ASCENDING)])
-            for tick in ticks:
-                timestamp = tick.time
-                time = datetime.datetime.fromtimestamp(float(tick.time),pytz.timezone('US/Eastern'))
-                tick_ID = tick_date_now*1000000 + self.tick_num
-                time = time.strftime("%Y-%m-%d %H:%M:%S")
-                print("Historical Tick Last. Req Id: ", reqId, ", option_code: ", option_code,
-                      ", tick_ID: ", tick_ID, ", time: ", time, ", timestamp: ", timestamp,
-                      ", price: ", tick.price, ", size: ", tick.size, ", exchange: ", tick.exchange,
-                      ", special conditions:", tick.specialConditions)
-
-                time = datetime.datetime.strptime(time, "%Y-%m-%d %H:%M:%S")
-                # 定义更新主键，若主键存在则更新，不存在则插入
-                update_key = {'tick_ID': tick_ID, 'time': time, 'option_code': option_code}
-                # 定义更新内容
-                update_item = {'option_code': option_code, 'tick_ID': tick_ID, 'time': time, 'timestamp':timestamp,
-                               'price': tick.price, 'size': tick.size,
-                               'exchange': tick.exchange, 'special conditions': tick.specialConditions,
-                               'update_time': datetime.datetime.now()}
-                # 执行更新操作
-                my_db[stock_code].update_one(update_key, {'$set': update_item}, upsert=True)
-                self.tick_num += 1
-            print(len(ticks))
-            if len(ticks) < 1000:
-                self.opt_req_next_time = True
-                print(self.tick_num - 1)
-                self.tick_num = 1
-            else:
-                self.opt_req_continue = True
-                self.lasttime = datetime.datetime.fromtimestamp(float(ticks[-1].time), pytz.timezone('US/Eastern'))
-                n=-2
-                while ticks[-1].time == ticks[n].time:
-                    n -= 1
-                self.tick_num += (n + 1)
+            tick_head = [reqId, ticks[0].time]
         else:
-            self.opt_req_next_time = True
-            self.tick_num = 1
-            print(datetime.datetime.now())
+            tick_head = []
+        if self.tick_head != tick_head:    #check if data is repeated
+            self.tick_head = tick_head
+            if ticks:
+                time = datetime.datetime.fromtimestamp(float(ticks[0].time), pytz.timezone('US/Eastern'))
+                tick_date_now = time.year * 10000 + time.month * 100 + time.day
+                option_code = self.option_code_map[reqId]
+                stock_code = option_code.split()[0]
+                my_db[stock_code].create_index([('option_code', ASCENDING),('time', ASCENDING)])
+                for tick in ticks:
+                    timestamp = tick.time
+                    time = datetime.datetime.fromtimestamp(float(tick.time),pytz.timezone('US/Eastern'))
+                    tick_ID = tick_date_now*1000000 + self.tick_num
+                    time = time.strftime("%Y-%m-%d %H:%M:%S")
+                    print("Historical Tick Last. Req Id: ", reqId, ", option_code: ", option_code,
+                          ", tick_ID: ", tick_ID, ", time: ", time, ", timestamp: ", timestamp,
+                          ", price: ", tick.price, ", size: ", tick.size, ", exchange: ", tick.exchange,
+                          ", special conditions:", tick.specialConditions)
+
+                    time = datetime.datetime.strptime(time, "%Y-%m-%d %H:%M:%S")
+                    # 定义更新主键，若主键存在则更新，不存在则插入
+                    update_key = {'tick_ID': tick_ID, 'time': time, 'option_code': option_code}
+                    # 定义更新内容
+                    update_item = {'option_code': option_code, 'tick_ID': tick_ID, 'time': time, 'timestamp':timestamp,
+                                   'price': tick.price, 'size': tick.size,
+                                   'exchange': tick.exchange, 'special conditions': tick.specialConditions,
+                                   'update_time': datetime.datetime.now()}
+                    # 执行更新操作
+                    my_db[stock_code].update_one(update_key, {'$set': update_item}, upsert=True)
+                    self.tick_num += 1
+                print(len(ticks))
+                if len(ticks) < 1000:
+                    self.opt_req_next_time = True
+                    print(self.tick_num - 1)
+                    self.tick_num = 1
+                else:
+                    self.opt_req_continue = True
+                    self.lasttime = datetime.datetime.fromtimestamp(float(ticks[-1].time), pytz.timezone('US/Eastern'))
+                    n=-2
+                    while ticks[-1].time == ticks[n].time:
+                        n -= 1
+                    self.tick_num += (n + 1)
+            else:
+                self.opt_req_next_time = True
+                self.tick_num = 1
+                print(datetime.datetime.now())
     # ! [historicaltickslast]
 
     @printWhenExecuting

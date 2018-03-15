@@ -182,7 +182,10 @@ class Processer(Thread):
             else:
                 option_code = option_code_map[index]
                 if option_code not in option_code_ignore:
-                    option_code_headTime = option_code_headtime[option_code]
+                    if option_code in option_code_headtime.keys():
+                        option_code_headTime = option_code_headtime[option_code]
+                    else:
+                        option_code_headTime = 20171122
                     self.client.opt_req_next_code = False
                     queryTime = datetime.datetime(2018, 3, 12, 9, 30)
                     if option_code in option_code_jump.keys():
@@ -219,7 +222,7 @@ class Processer(Thread):
                 else:
                     time.sleep(0.5)
                     time_recorder += 1
-                    if time_recorder > 600:  #5分钟内没有返回内容，则重新提交请求
+                    if time_recorder > 1200:  #10分钟内没有返回内容，则重新提交请求
                         break
                     print('sleeping.................')
             if headTime > queryTime.year*10000+queryTime.month*100+queryTime.day :
