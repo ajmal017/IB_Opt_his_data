@@ -229,12 +229,12 @@ class TestApp(TestWrapper, TestClient):
         self.tick_reqId = None
         self.tick_num = 1
         self.process_done = False
-        self.option_code_map = ["AAPL  180420C00180000"]
+        self.option_code_map = []
         self.req_opt_contract_end = False
         self.opt_req_next_time = False
         self.opt_req_continue = False
         self.lasttime = None
-        self.tick_head = [0,0]
+        self.order_id = 0
 
 
     def dumpTestCoverageSituation(self):
@@ -986,16 +986,13 @@ class TestApp(TestWrapper, TestClient):
     def historicalTicksLast(self, reqId: int, ticks: ListOfHistoricalTickLast,
                             done: bool):
         print('start option tick test..........................')
-        if ticks:
-            tick_head = [reqId, ticks[0].time]
-        else:
-            tick_head = []
-        if self.tick_head != tick_head:    #check if data is repeated
-            self.tick_head = tick_head
+        if self.order_id < reqId:    #check if data is repeated
+            self.order_id = reqId
             if ticks:
+                index = reqId//100000
                 time = datetime.datetime.fromtimestamp(float(ticks[0].time), pytz.timezone('US/Eastern'))
                 tick_date_now = time.year * 10000 + time.month * 100 + time.day
-                option_code = self.option_code_map[reqId]
+                option_code = self.option_code_map[index]
                 stock_code = option_code.split()[0]
                 my_db[stock_code].create_index([('option_code', ASCENDING),('time', ASCENDING)])
                 for tick in ticks:
@@ -1012,7 +1009,7 @@ class TestApp(TestWrapper, TestClient):
                     # 定义更新主键，若主键存在则更新，不存在则插入
                     update_key = {'tick_ID': tick_ID, 'time': time, 'option_code': option_code}
                     # 定义更新内容
-                    update_item = {'option_code': option_code, 'tick_ID': tick_ID, 'time': time, 'timestamp':timestamp,
+                    update_item = {'option_code': option_code, 'tick_ID': tick_ID, 'time': time, 'timestamp': timestamp,
                                    'price': tick.price, 'size': tick.size,
                                    'exchange': tick.exchange, 'special conditions': tick.specialConditions,
                                    'update_time': datetime.datetime.now()}
@@ -1203,8 +1200,9 @@ class TestApp(TestWrapper, TestClient):
         print(len(self.option_code_map))
         if reqId == stock_code_max_index:
             self.req_opt_contract_end = True
-            option_map = pd.DataFrame(self.option_code_map)
-            option_map.to_csv('option_code_map.csv')
+            option_map = pd.DataFrame(self.option_code_map,columns=['option_code'])
+            option_map.to_csv('option_code_map.csv',index=False)
+
         # contract_pd = pd.DataFrame(self.contract_data, columns=self.columnsname)
         # contract_pd.to_csv('contract_details.csv')
         # print(self.contract_data)
@@ -1810,7 +1808,7 @@ def main():
     # cmdLineParser.add_option("-c", action="store_True", dest="use_cache", default = False, help = "use the cache")
     # cmdLineParser.add_option("-f", action="store", type="string", dest="file", default="", help="the input file")
     cmdLineParser.add_argument("-p", "--port", action="store", type=int,
-                               dest="port", default=7496, help="The TCP port to use")
+                               dest="port", default=4001, help="The TCP port to use")
     cmdLineParser.add_argument("-C", "--global-cancel", action="store_true",
                                dest="global_cancel", default=False,
                                help="whether to trigger a globalCancel req")

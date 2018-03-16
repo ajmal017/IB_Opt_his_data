@@ -14,6 +14,7 @@ from datetime import timedelta
 from stock_HeadTimestamp import *
 from stock_code_define import *
 from option_code_ignore import *
+import pandas as pd
 
 
 class Processer(Thread):
@@ -33,11 +34,11 @@ class Processer(Thread):
             self.client.reqGlobalCancel()
         else:
             print("Executing requests")
-            self.historicalDataRequests_req_HeadTimestamp()
+            # self.historicalDataRequests_req_HeadTimestamp()
             # self.historicalDataRequests_req_Seconds()
             # self.historicalDataRequests_req_Days()
             # self.optionsOperations_req()
-            # self.option_tikc_req()
+            self.option_tikc_req()
             # self.mktData_req_opt()
             # self.historicalDataRequests_req_opt_Seconds()
 
@@ -161,22 +162,27 @@ class Processer(Thread):
         print('request done')
 
     def option_tikc_req(self):
-        for index in self.stock_code_map.keys():
-            if self.client.process_done:
-                break
-            else:
-                stock_code = self.stock_code_map[index]
-                self.client.reqContractDetails(index, ContractSamples.OptionForQuery(stock_code))
-                time.sleep(30)
-                print('Asked for ', str(stock_code))
+        index_continue = 0
+        if index_continue == 0:
+            for index in self.stock_code_map.keys():
+                if self.client.process_done:
+                    break
+                else:
+                    stock_code = self.stock_code_map[index]
+                    self.client.reqContractDetails(index, ContractSamples.OptionForQuery(stock_code))
+                    time.sleep(30)
+                    print('Asked for ', str(stock_code))
 
-        while not self.client.req_opt_contract_end and not self.client.process_done:
-            print('waiting for req_opt_contract_end Done')
-            time.sleep(0.5)
-        print(self.client.option_code_map)
+            while not self.client.req_opt_contract_end and not self.client.process_done:
+                print('waiting for req_opt_contract_end Done')
+                time.sleep(2)
+            print(self.client.option_code_map)
+        else:
+            temp = pd.read_csv('option_code_map.csv')
+            self.client.option_code_map = temp['option_code'].values.tolist()
 
         option_code_map = self.client.option_code_map
-        for index in range(len(option_code_map)):
+        for index in range(index_continue, len(option_code_map)):
             if self.client.process_done:
                 break
             else:
@@ -198,11 +204,12 @@ class Processer(Thread):
         queryTime = query_Time
         headTime = option_code_headTime
         opt_req_next_code = False
+        order_id = index * 100000 + 1
         while not opt_req_next_code and not self.client.process_done:
             time_recorder = 0
-            self.client.reqHistoricalTicks(index, ContractSamples.OptionWithLocalSymbol(option_code),
+            self.client.reqHistoricalTicks(order_id, ContractSamples.OptionWithLocalSymbol(option_code),
                                            queryTime.strftime("%Y%m%d %H:%M:%S"), "", 1000, "TRADES", 1, True, [])
-            time.sleep(15)
+            time.sleep(11)
             while not self.client.process_done:
                 if self.client.opt_req_next_time:
                     if queryTime.isoweekday() == 1:
@@ -210,21 +217,32 @@ class Processer(Thread):
                     else:
                         queryTime -= timedelta(days=1)
                     queryTime = datetime.datetime.combine(queryTime.date(),query_Time.time())
+                    order_id += 1
                     print(queryTime)
                     self.client.opt_req_next_time = False
                     print('next time...............')
+                    print(datetime.datetime.now())
                     break
                 elif self.client.opt_req_continue:
                     queryTime = self.client.lasttime
+                    order_id += 1
                     self.client.opt_req_continue = False
                     print('continue...............')
+                    print(datetime.datetime.now())
                     break
                 else:
                     time.sleep(5)
                     time_recorder += 1
                     if time_recorder > 60:  #5分钟内没有返回内容，则重新提交请求
-                        break
+                        fw = open('data.txt', 'a')
+                        fw.write(option_code+' '+str(order_id)+' '+str(queryTime)+'\n')
+                        fw.close()
+                        self.client.opt_req_next_time = True
+                        self.client.tick_num = 1
+                        time_recorder = 1
+                        # break
                     print('sleeping.................')
+                    print(datetime.datetime.now())
             if headTime > queryTime.year*10000+queryTime.month*100+queryTime.day :
                 opt_req_next_code = True
 
