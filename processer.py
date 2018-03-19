@@ -162,7 +162,7 @@ class Processer(Thread):
         print('request done')
 
     def option_tikc_req(self):
-        index_continue = 0
+        index_continue = 112
         if index_continue == 0:
             for index in self.stock_code_map.keys():
                 if self.client.process_done:
@@ -209,7 +209,7 @@ class Processer(Thread):
             time_recorder = 0
             self.client.reqHistoricalTicks(order_id, ContractSamples.OptionWithLocalSymbol(option_code),
                                            queryTime.strftime("%Y%m%d %H:%M:%S"), "", 1000, "TRADES", 1, True, [])
-            time.sleep(11)
+            time.sleep(10)
             while not self.client.process_done:
                 if self.client.opt_req_next_time:
                     if queryTime.isoweekday() == 1:
@@ -231,9 +231,9 @@ class Processer(Thread):
                     print(datetime.datetime.now())
                     break
                 else:
-                    time.sleep(5)
+                    time.sleep(1)
                     time_recorder += 1
-                    if time_recorder > 60:  #5分钟内没有返回内容，则重新提交请求
+                    if time_recorder > 180:  #3分钟内没有返回内容，则重新提交请求
                         fw = open('data.txt', 'a')
                         fw.write(option_code+' '+str(order_id)+' '+str(queryTime)+'\n')
                         fw.close()
